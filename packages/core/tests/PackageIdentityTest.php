@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 final class PackageIdentityTest extends TestCase
 {
-    public function testCorePackageIdentityNameIsStable(): void
+    public function test_core_package_identity_name_is_stable(): void
     {
         self::assertSame('core', PackageIdentity::name());
     }

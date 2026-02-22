@@ -44,6 +44,9 @@
 - `composer analyse`
 - `composer format -- --test`
 
-## Environment Constraint
-- Current local runtime is `PHP 7.4.33`.
-- Project target is modern PHP (`^8.2`), so full quality gates require PHP 8.2+ runtime.
+## Environment Setup
+- Host runtime can be older (for example `PHP 7.4.x`).
+- Use the project containerized environment for all checks:
+  1. `make build`
+  2. `make install`
+  3. `make qa`
