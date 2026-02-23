@@ -13,6 +13,7 @@ use PhpEvals\Laravel\LaravelEvalsServiceProvider;
 final class LaravelBridgeTest extends TestCase
 {
     private string $datasetPath;
+    private string $reportPath;
 
     protected function setUp(): void
     {
@@ -20,6 +21,7 @@ final class LaravelBridgeTest extends TestCase
 
         $this->datasetPath = sys_get_temp_dir().'/php-evals-laravel-'.uniqid('', true);
         mkdir($this->datasetPath, 0777, true);
+        $this->reportPath = $this->datasetPath.'/report.json';
         file_put_contents(
             $this->datasetPath.'/refund.jsonl',
             "{\"id\":\"case-1\",\"input\":\"refund\",\"expected\":{\"assertions\":[{\"type\":\"contains\",\"value\":\"refund\"}]}}\n",
@@ -38,6 +40,7 @@ final class LaravelBridgeTest extends TestCase
 
     protected function tearDown(): void
     {
+        @unlink($this->reportPath);
         @unlink($this->datasetPath.'/refund.jsonl');
         @rmdir($this->datasetPath);
 
@@ -56,11 +59,31 @@ final class LaravelBridgeTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_artisan_command_supports_suite_argument(): void
+    {
+        $this->artisan('ai:eval refund')
+            ->expectsOutputToContain('Suite: refund')
+            ->assertExitCode(0);
+    }
+
     public function test_artisan_command_handles_all_options(): void
     {
-        $this->artisan('ai:eval --suite=refund --model=mock-model --format=json --stop-on-failure')
+        $this->artisan(sprintf(
+            'ai:eval --suite=refund --model=mock-model --format=json --stop-on-failure --dataset-path=%s --json-report-path=%s',
+            $this->datasetPath,
+            $this->reportPath,
+        ))
             ->expectsOutputToContain('"suites"')
             ->assertExitCode(0);
+
+        self::assertFileExists($this->reportPath);
+    }
+
+    public function test_artisan_command_rejects_invalid_format(): void
+    {
+        $this->artisan('ai:eval --suite=refund --format=xml')
+            ->expectsOutputToContain('Invalid format "xml".')
+            ->assertExitCode(2);
     }
 
     public function test_publish_tag_is_registered(): void
