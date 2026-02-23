@@ -13,6 +13,7 @@ use PhpEvals\Laravel\LaravelEvalsServiceProvider;
 final class LaravelBridgeTest extends TestCase
 {
     private string $datasetPath;
+
     private string $reportPath;
 
     protected function setUp(): void
