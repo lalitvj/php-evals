@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use PhpEvals\Core\Cli\PhpEvalsApplication;
+
+require dirname(__DIR__, 3).'/vendor/autoload.php';
+
+$application = new PhpEvalsApplication([], getcwd());
+exit($application->run($_SERVER['argv']));

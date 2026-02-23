@@ -23,6 +23,9 @@
             "PhpEvals\\Laravel\\Tests\\": "packages/laravel/tests/"
         }
     },
+    "bin": [
+        "packages/core/bin/php-evals"
+    ],
     "scripts": {
         "test": "phpunit --configuration=phpunit.xml.dist --coverage-text --coverage-clover=coverage/clover.xml",
         "analyse": "phpstan analyse --configuration=phpstan.neon.dist",
