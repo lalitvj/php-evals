@@ -143,6 +143,17 @@ php artisan ai:eval:queue --resume-run-id=<run-id>
 - Laravel adapter adds commands, queue integration, config conventions, and onboarding scaffolds.
 - This complements PHPUnit/Pest rather than replacing them: use tests for deterministic app behavior; use `php-evals` for model behavior regression and quality tracking.
 
+## Documentation
+Start here if you are new:
+- `docs/first-time-user-guide.md`
+
+Then use:
+- `docs/installation.md`
+- `docs/quickstart-core.md`
+- `docs/quickstart-laravel.md`
+- `docs/assertions.md`
+- `docs/ci.md`
+
 ## Contribution Note
 Before opening a PR:
 
