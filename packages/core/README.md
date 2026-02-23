@@ -1,9 +1,18 @@
-# Core Package
+# php-evals/core
 
-Framework-agnostic runtime for `php-evals`.
-
-This package will hold:
-- CLI entrypoint and runner
-- contracts and DTOs
+Framework-agnostic package with:
+- dataset loader (`.jsonl`)
 - assertion engine
-- reporting primitives
+- evaluation runner
+- CLI (`packages/core/bin/php-evals` in monorepo)
+- testing helper (`PhpEvals\Core\Testing\EvalTestRunner`)
+
+Default runtime contract setup:
+- `ModelClient`
+- `SimilarityScorer`
+- pluggable assertion registry
+
+See:
+- `docs/quickstart-core.md`
+- `docs/assertions.md`
+- `docs/extending.md`
