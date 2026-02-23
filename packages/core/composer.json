@@ -1,0 +1,19 @@
+{
+    "name": "php-evals/core",
+    "description": "Framework-agnostic PHP evaluation engine for LLM outputs.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpEvals\\Core\\": "src/"
+        }
+    },
+    "bin": [
+        "bin/php-evals"
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
