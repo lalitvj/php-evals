@@ -16,9 +16,12 @@ final class AssertionResult
         public readonly array $details = [],
     ) {}
 
-    public static function pass(string $type): self
+    /**
+     * @param  array<string, mixed>  $details
+     */
+    public static function pass(string $type, array $details = []): self
     {
-        return new self($type, true);
+        return new self($type, true, null, $details);
     }
 
     /**
