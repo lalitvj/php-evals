@@ -1,8 +1,14 @@
-# Laravel Bridge Package
+# php-evals/laravel
 
-Optional Laravel integration layer for `php-evals`.
+Optional Laravel bridge for `php-evals`.
 
-This package will provide:
-- Service Provider registration
-- config mapping into core options
-- Artisan command wrapper for the core CLI runner
+Includes:
+- `LaravelEvalsServiceProvider`
+- config file: `ai-evals.php`
+- command: `php artisan ai:eval`
+
+The command delegates execution to the framework-agnostic core runner.
+
+See:
+- `docs/quickstart-laravel.md`
+- `docs/installation.md`
