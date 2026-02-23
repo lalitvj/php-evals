@@ -55,4 +55,52 @@ final class SuiteResult
             ),
         );
     }
+
+    public function totalTokens(): int
+    {
+        $total = 0;
+        foreach ($this->caseResults as $caseResult) {
+            $total += $caseResult->totalTokens();
+        }
+
+        return $total;
+    }
+
+    public function totalCost(): float
+    {
+        $total = 0.0;
+        foreach ($this->caseResults as $caseResult) {
+            $total += $caseResult->cost;
+        }
+
+        return $total;
+    }
+
+    public function averageCaseLatencyMs(): float
+    {
+        if ($this->caseResults === []) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+        foreach ($this->caseResults as $caseResult) {
+            $total += $caseResult->latencyMs;
+        }
+
+        return $total / count($this->caseResults);
+    }
+
+    public function averageScore(): float
+    {
+        if ($this->caseResults === []) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+        foreach ($this->caseResults as $caseResult) {
+            $total += $caseResult->score();
+        }
+
+        return $total / count($this->caseResults);
+    }
 }

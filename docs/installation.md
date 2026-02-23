@@ -1,5 +1,9 @@
 # Installation
 
+If you are onboarding for the first time, read:
+
+- `docs/first-time-user-guide.md`
+
 ## Requirements
 - PHP `^8.2`
 - Composer
@@ -53,5 +57,6 @@ PhpEvals\Laravel\LaravelEvalsServiceProvider::class,
 Then run:
 
 ```bash
-php artisan ai:eval
+php artisan ai:eval:init
+php artisan ai:eval sample
 ```

@@ -13,11 +13,14 @@ final class ConsoleReporter
         $lines = [];
         $lines[] = sprintf('Suite: %s', $result->suite);
         $lines[] = sprintf(
-            'Cases: %d | Passed: %d | Failed: %d | Duration: %.2fms',
+            'Cases: %d | Passed: %d | Failed: %d | Duration: %.2fms | Avg latency: %.2fms | Tokens: %d | Cost: %.6f',
             $result->totalCases(),
             $result->passedCases(),
             $result->failedCases(),
             $result->durationMs,
+            $result->averageCaseLatencyMs(),
+            $result->totalTokens(),
+            $result->totalCost(),
         );
 
         foreach ($result->failures() as $failure) {

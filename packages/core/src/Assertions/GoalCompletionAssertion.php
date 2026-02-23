@@ -10,33 +10,33 @@ use PhpEvals\Core\Data\AssertionResult;
 use PhpEvals\Core\Data\EvalCase;
 use PhpEvals\Core\Data\ModelResponse;
 
-final class SemanticSimilarityAssertion implements Assertion
+final class GoalCompletionAssertion implements Assertion
 {
     public function __construct(private readonly SimilarityScorer $scorer) {}
 
     public function type(): string
     {
-        return 'semantic_similarity';
+        return 'goal_completion';
     }
 
     public function evaluate(EvalCase $case, ModelResponse $response, array $definition): AssertionResult
     {
-        $reference = $definition['reference'] ?? null;
+        $goal = $definition['goal'] ?? ($case->metadata['goal'] ?? null);
         $threshold = $definition['threshold'] ?? 0.7;
 
-        if (! is_string($reference) || $reference === '') {
-            return AssertionResult::fail($this->type(), 'semantic_similarity.reference must be a non-empty string.');
+        if (! is_string($goal) || $goal === '') {
+            return AssertionResult::fail($this->type(), 'goal_completion.goal must be a non-empty string.');
         }
 
         if (! is_int($threshold) && ! is_float($threshold)) {
-            return AssertionResult::fail($this->type(), 'semantic_similarity.threshold must be numeric.');
+            return AssertionResult::fail($this->type(), 'goal_completion.threshold must be numeric.');
         }
 
-        $score = $this->scorer->score($response->output, $reference);
+        $score = $this->scorer->score($response->output, $goal);
         if ($score < (float) $threshold) {
             return AssertionResult::fail(
                 $this->type(),
-                sprintf('Similarity %.3f is lower than threshold %.3f.', $score, (float) $threshold),
+                sprintf('Goal completion score %.3f is lower than threshold %.3f.', $score, (float) $threshold),
                 ['score' => $score],
             );
         }
