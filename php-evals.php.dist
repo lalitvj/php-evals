@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'dataset_path' => __DIR__.'/storage/ai-evals',
+    'model' => null,
+    'format' => 'table',
+    'stop_on_failure' => false,
+    'json_report_path' => null,
+
+    'model_client' => \PhpEvals\Core\Model\ArrayMapModelClient::class,
+    'model_client_options' => [
+        'responses' => [],
+    ],
+
+    'similarity_scorer' => null,
+    'similarity_scorer_options' => [],
+];
