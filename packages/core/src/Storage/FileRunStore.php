@@ -6,13 +6,19 @@ namespace PhpEvals\Core\Storage;
 
 use PhpEvals\Core\Contracts\RunStore;
 use PhpEvals\Core\Exceptions\RuntimeConfigurationException;
+use PhpEvals\Core\Exceptions\StorageWriteException;
 
 final class FileRunStore implements RunStore
 {
     public function __construct(private readonly string $directory)
     {
-        if (! is_dir($this->directory) && ! @mkdir($this->directory, 0777, true) && ! is_dir($this->directory)) {
-            throw new RuntimeConfigurationException(sprintf('Unable to create run store directory: %s', $this->directory));
+        if (! is_dir($this->directory)) {
+            $created = mkdir($this->directory, 0777, true);
+            if (! $created && ! is_dir($this->directory)) {
+                throw new RuntimeConfigurationException(
+                    sprintf('Unable to create run store directory: %s — %s', $this->directory, error_get_last()['message'] ?? 'unknown error'),
+                );
+            }
         }
     }
 
@@ -125,6 +131,11 @@ final class FileRunStore implements RunStore
             throw new RuntimeConfigurationException(sprintf('Unable to encode run payload for %s.', $path));
         }
 
-        file_put_contents($path, $encoded);
+        $result = file_put_contents($path, $encoded);
+        if ($result === false) {
+            throw new StorageWriteException(
+                sprintf('Unable to write run data to %s — %s', $path, error_get_last()['message'] ?? 'unknown error'),
+            );
+        }
     }
 }

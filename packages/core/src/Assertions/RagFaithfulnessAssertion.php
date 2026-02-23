@@ -8,6 +8,7 @@ use PhpEvals\Core\Contracts\Assertion;
 use PhpEvals\Core\Data\AssertionResult;
 use PhpEvals\Core\Data\EvalCase;
 use PhpEvals\Core\Data\ModelResponse;
+use PhpEvals\Core\Support\TextTokenizer;
 
 final class RagFaithfulnessAssertion implements Assertion
 {
@@ -32,7 +33,7 @@ final class RagFaithfulnessAssertion implements Assertion
         }
 
         $contextText = strtolower(implode(' ', array_filter(array_map(static fn (mixed $entry): string => is_string($entry) ? $entry : '', $context))));
-        $outputTokens = $this->tokens($response->output);
+        $outputTokens = TextTokenizer::tokenize($response->output);
 
         if ($outputTokens === []) {
             return AssertionResult::fail($this->type(), 'Response output is empty, cannot score faithfulness.');
@@ -56,13 +57,5 @@ final class RagFaithfulnessAssertion implements Assertion
         }
 
         return AssertionResult::pass($this->type(), ['score' => $score]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function tokens(string $text): array
-    {
-        return array_values(array_filter(array_unique(preg_split('/\W+/', strtolower($text)) ?: []), static fn (string $token): bool => strlen($token) >= 3));
     }
 }

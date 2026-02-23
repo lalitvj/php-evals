@@ -29,6 +29,7 @@ final class RunEvalsArtisanCommand extends Command
         {--seed= : Deterministic seed}
         {--cache-enabled : Enable provider response cache}
         {--cache-path= : Cache file path}
+        {--cache-ttl= : Cache TTL in seconds}
         {--replay-run-id= : Replay responses from previous run}
         {--compare-baseline-run-id= : Baseline run id}
         {--compare-candidate-run-id= : Candidate run id}
@@ -79,6 +80,7 @@ final class RunEvalsArtisanCommand extends Command
             'run-store-password',
             'seed',
             'cache-path',
+            'cache-ttl',
             'replay-run-id',
             'compare-baseline-run-id',
             'compare-candidate-run-id',

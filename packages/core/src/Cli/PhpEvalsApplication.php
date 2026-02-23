@@ -267,6 +267,10 @@ final class PhpEvalsApplication
             $merged['seed'] = (int) $options['seed'];
         }
 
+        if (is_string($options['cache_ttl'] ?? null) && is_numeric($options['cache_ttl'])) {
+            $merged['cache_ttl'] = (int) $options['cache_ttl'];
+        }
+
         if (is_string($options['fail_threshold'] ?? null) && $options['fail_threshold'] !== '') {
             $merged['fail_thresholds'] = $this->parseThresholds($options['fail_threshold']);
         }
@@ -375,6 +379,7 @@ final class PhpEvalsApplication
             '  --seed=<int>                    Seed value for deterministic requests.',
             '  --cache-enabled                 Enable provider response cache.',
             '  --cache-path=<path>             Path for provider cache files.',
+            '  --cache-ttl=<seconds>           Cache entry time-to-live in seconds.',
             '  --replay-run-id=<run_id>        Replay responses from a stored run.',
             '  --compare-baseline-run-id=<id>  Compare current/candidate run against baseline run.',
             '  --compare-candidate-run-id=<id> Compare two stored runs.',

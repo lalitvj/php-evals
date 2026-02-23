@@ -19,6 +19,7 @@ return [
     'seed' => null,
     'cache_enabled' => env('AI_EVALS_CACHE_ENABLED', false),
     'cache_path' => storage_path('ai-evals/cache'),
+    'cache_ttl' => env('AI_EVALS_CACHE_TTL'),
     'replay_run_id' => null,
     'compare_baseline_run_id' => null,
     'compare_candidate_run_id' => null,

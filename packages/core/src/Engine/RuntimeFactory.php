@@ -90,7 +90,7 @@ final class RuntimeFactory
         }
 
         if ($config->cacheEnabled) {
-            $client = new CachedModelClient($client, $config->cachePath);
+            $client = new CachedModelClient($client, $config->cachePath, $config->cacheTtl);
         }
 
         return $client;
