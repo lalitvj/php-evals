@@ -91,12 +91,20 @@ final class PdoRunStore implements RunStore
 
     private function ensureSchema(): void
     {
-        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_eval_runs (
-            id VARCHAR(191) PRIMARY KEY,
-            payload LONGTEXT NOT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL
-        )');
+        try {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_eval_runs (
+                id VARCHAR(191) PRIMARY KEY,
+                payload LONGTEXT NOT NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            )');
+        } catch (\PDOException $e) {
+            throw new RuntimeConfigurationException(
+                sprintf('Unable to create ai_eval_runs table: %s', $e->getMessage()),
+                (int) $e->getCode(),
+                $e,
+            );
+        }
     }
 
     /**

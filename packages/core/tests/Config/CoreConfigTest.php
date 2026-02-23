@@ -20,6 +20,7 @@ final class CoreConfigTest extends TestCase
         self::assertNull($config->jsonReportPath);
         self::assertNull($config->modelClient);
         self::assertSame([], $config->modelClientOptions);
+        self::assertNull($config->cacheTtl);
     }
 
     public function test_from_array_normalizes_invalid_format(): void
@@ -35,5 +36,32 @@ final class CoreConfigTest extends TestCase
 
         self::assertSame('/tmp/b', $config->datasetPath);
         self::assertSame('json', $config->format);
+    }
+
+    public function test_cache_ttl_parsed_when_positive_integer(): void
+    {
+        $config = CoreConfig::fromArray(['cache_ttl' => 3600]);
+
+        self::assertSame(3600, $config->cacheTtl);
+    }
+
+    public function test_cache_ttl_null_when_zero_or_negative(): void
+    {
+        self::assertNull(CoreConfig::fromArray(['cache_ttl' => 0])->cacheTtl);
+        self::assertNull(CoreConfig::fromArray(['cache_ttl' => -1])->cacheTtl);
+    }
+
+    public function test_cache_ttl_null_when_non_integer(): void
+    {
+        self::assertNull(CoreConfig::fromArray(['cache_ttl' => 'abc'])->cacheTtl);
+        self::assertNull(CoreConfig::fromArray(['cache_ttl' => null])->cacheTtl);
+    }
+
+    public function test_cache_ttl_roundtrips_through_to_array(): void
+    {
+        $config = CoreConfig::fromArray(['cache_ttl' => 7200]);
+        $restored = CoreConfig::fromArray($config->toArray());
+
+        self::assertSame(7200, $restored->cacheTtl);
     }
 }
