@@ -6,7 +6,11 @@ namespace PhpEvals\Laravel;
 
 use Illuminate\Support\ServiceProvider;
 use PhpEvals\Core\Cli\PhpEvalsApplication;
+use PhpEvals\Laravel\Commands\CompareEvalsArtisanCommand;
+use PhpEvals\Laravel\Commands\InitEvalsArtisanCommand;
+use PhpEvals\Laravel\Commands\QueueEvalsArtisanCommand;
 use PhpEvals\Laravel\Commands\RunEvalsArtisanCommand;
+use PhpEvals\Laravel\Commands\ShowEvalRunProgressArtisanCommand;
 
 final class LaravelEvalsServiceProvider extends ServiceProvider
 {
@@ -35,12 +39,30 @@ final class LaravelEvalsServiceProvider extends ServiceProvider
             $configTarget = $this->app->configPath('ai-evals.php');
         }
 
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+
         $this->publishes([
             __DIR__.'/../config/ai-evals.php' => $configTarget,
         ], 'ai-evals-config');
 
+        if (method_exists($this, 'publishesMigrations')) {
+            $this->publishesMigrations([
+                __DIR__.'/../database/migrations' => database_path('migrations'),
+            ]);
+        } else {
+            $this->publishes([
+                __DIR__.'/../database/migrations' => database_path('migrations'),
+            ], 'ai-evals-migrations');
+        }
+
         if ($this->app->runningInConsole()) {
-            $this->commands([RunEvalsArtisanCommand::class]);
+            $this->commands([
+                RunEvalsArtisanCommand::class,
+                CompareEvalsArtisanCommand::class,
+                InitEvalsArtisanCommand::class,
+                QueueEvalsArtisanCommand::class,
+                ShowEvalRunProgressArtisanCommand::class,
+            ]);
         }
     }
 }
