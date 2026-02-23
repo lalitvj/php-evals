@@ -1,28 +1,39 @@
 # php-evals
 
-Framework-agnostic PHP evaluation toolkit for LLM output quality, with optional Laravel integration.
+## Introduction
+`php-evals` is a framework-agnostic PHP toolkit for evaluating LLM behavior with regression-friendly datasets.
 
-## Design Goal
-Keep runtime logic framework agnostic while giving Laravel users first-class ergonomics.
+It is designed with a split architecture:
+- `packages/core`: pure PHP runtime (no framework coupling)
+- `packages/laravel`: thin Laravel adapter for first-class DX
 
-### Architecture Split
-- `packages/core`: pure PHP eval runtime (contracts, loader, validator, runner, assertions, reporting).
-- `packages/laravel`: thin Laravel adapter (service provider, config mapping, Artisan command).
+This lets non-Laravel projects use the same engine, while Laravel projects get native command ergonomics.
 
-The core package intentionally avoids framework runtime dependencies.  
-This boundary is enforced by architecture tests in `packages/core/tests/Architecture`.
+## Key Features
+- Framework-agnostic core runtime with typed contracts and DTOs
+- JSONL suite loading and validation with actionable errors
+- Assertion system for common LLM checks:
+  - `contains`, `not_contains`, `regex`, `json_schema`
+  - `semantic_similarity`
+  - `tool_called`, `tool_call_count`, `tool_args_schema`
+- CLI with CI-friendly exit behavior and report output
+- Laravel bridge with `php artisan ai:eval`
+- Test helper for integrating eval runs into PHPUnit/Pest
 
-## Requirements
+## Getting Started
+### Requirements
 - PHP `^8.2`
-- Docker (recommended for consistent local setup)
+- Docker (recommended for local consistency)
 
-## Local Development
-1. `make build`
-2. `make install`
-3. `make qa`
+### Local Setup
+```bash
+make build
+make install
+make qa
+```
 
-## Core CLI Usage
-Create `php-evals.php` in your project root:
+### Minimal Core Usage
+Create `php-evals.php` at project root:
 
 ```php
 <?php
@@ -40,79 +51,74 @@ return [
 ];
 ```
 
-Create a suite file `storage/ai-evals/refund.jsonl`:
+Create `storage/ai-evals/refund.jsonl`:
 
 ```json
 {"id":"refund_001","input":"I was charged twice","expected":{"assertions":[{"type":"contains","value":"Refund"}]}}
 ```
 
 Run:
-- `packages/core/bin/php-evals`
-- `packages/core/bin/php-evals --suite=refund --format=json`
-- `packages/core/bin/php-evals --suite=refund --format=json --json-report-path=artifacts/evals.json`
 
-## Assertion Types
-- `contains`
-- `not_contains`
-- `regex`
-- `json_schema`
-- `semantic_similarity`
-- `tool_called`
-- `tool_call_count`
-- `tool_args_schema`
+```bash
+packages/core/bin/php-evals
+packages/core/bin/php-evals --suite=refund --format=json
+packages/core/bin/php-evals --suite=refund --format=json --json-report-path=artifacts/evals.json
+```
 
-## Laravel Bridge
-The repository includes `packages/laravel` with:
-- `LaravelEvalsServiceProvider`
-- Artisan command: `php artisan ai:eval`
+### Minimal Laravel Usage
+After registering the Laravel bridge package:
 
-### Laravel-First Command UX
-Use either suite argument or option:
-- `php artisan ai:eval refund`
-- `php artisan ai:eval --suite=refund`
+```bash
+php artisan ai:eval refund
+```
 
-Additional options map directly to core CLI:
-- `--model=...`
+You can also use:
+
+```bash
+php artisan ai:eval --suite=refund --format=json --stop-on-failure
+```
+
+## Feature Details
+### Core CLI Options
+- `--suite=<name>`
+- `--model=<name>`
 - `--format=table|json`
 - `--stop-on-failure`
-- `--dataset-path=...`
-- `--json-report-path=...`
-- `--config=...`
+- `--dataset-path=<path>`
+- `--json-report-path=<path>`
+- `--config=<path>`
 
-Invalid format values fail fast with a clear CLI error.
+### Laravel Command Options
+`ai:eval` supports:
+- `suite` argument or `--suite=` option
+- `--model=`
+- `--format=table|json`
+- `--stop-on-failure`
+- `--dataset-path=`
+- `--json-report-path=`
+- `--config=`
 
-## How This Differs From Pest/PHPUnit
-- Pest/PHPUnit are general test frameworks.
-- `php-evals` is a dataset-driven LLM regression layer on top of standard testing.
-- It adds eval-specific primitives: suite loading, model abstraction, semantic and tool-call assertions, and CI-friendly eval reporting.
-- You still use Pest/PHPUnit for app tests; use `php-evals` to prevent LLM behavior regressions over time.
+### How It Complements Pest/PHPUnit
+- Pest/PHPUnit are test frameworks.
+- `php-evals` is a dataset-driven LLM evaluation layer.
+- Use Pest/PHPUnit for app logic tests; use `php-evals` for AI behavior regression checks over time.
 
-## Developer Productivity Outcomes
-- Faster feedback with focused suites (`refund`, `checkout`, etc.).
-- Reusable eval datasets across local/dev/CI.
-- Better regression visibility via console + JSON reports.
-- Laravel users get native command workflow without coupling core runtime to Laravel internals.
+### Repo Layout
+- `packages/core`: framework-agnostic runtime and CLI
+- `packages/laravel`: Laravel bridge
+- `docs`: installation, quickstarts, assertions, CI, extension guides
 
-## Repository Layout
-- `packages/core`: framework-agnostic runtime and CLI.
-- `packages/laravel`: optional Laravel bridge.
-- `docs`: usage and contribution notes.
+## Contribution Note
+Contributions are welcome.
 
-## Documentation
-- `docs/installation.md`
-- `docs/quickstart-core.md`
-- `docs/quickstart-laravel.md`
-- `docs/assertions.md`
-- `docs/function-calling.md`
-- `docs/ci.md`
-- `docs/extending.md`
-- `docs/release-checklist.md`
+Before opening a PR:
+```bash
+make qa
+```
 
-## Test Helper
-`PhpEvals\Core\Testing\EvalTestRunner` provides utilities to run suites from PHPUnit/Pest tests.
+Please keep these principles:
+- Core stays framework agnostic
+- Laravel DX improvements stay in the adapter layer
+- Tests and docs must be updated with behavior changes
 
-## Quality Commands
-- `make test`
-- `make analyse`
-- `make format-check`
-- `make qa`
+See `docs/CONTRIBUTING.md` for workflow details.
