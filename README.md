@@ -1,29 +1,36 @@
 # php-evals
 
 ## Introduction
-`php-evals` is a framework-agnostic PHP toolkit for evaluating LLM behavior with regression-friendly datasets.
+`php-evals` is a framework-agnostic PHP evaluation toolkit for LLM apps.
 
-It is designed with a split architecture:
-- `packages/core`: pure PHP runtime (no framework coupling)
-- `packages/laravel`: thin Laravel adapter for first-class DX
-
-This lets non-Laravel projects use the same engine, while Laravel projects get native command ergonomics.
+It provides a core runtime (`packages/core`) and a Laravel-first adapter (`packages/laravel`) so you can keep evaluation logic portable while giving Laravel teams a faster onboarding path.
 
 ## Key Features
-- Framework-agnostic core runtime with typed contracts and DTOs
-- JSONL suite loading and validation with actionable errors
-- Assertion system for common LLM checks:
-  - `contains`, `not_contains`, `regex`, `json_schema`
-  - `semantic_similarity`
-  - `tool_called`, `tool_call_count`, `tool_args_schema`
-- CLI with CI-friendly exit behavior and report output
-- Laravel bridge with `php artisan ai:eval`
-- Test helper for integrating eval runs into PHPUnit/Pest
+- Baseline vs candidate comparison with regression thresholds and CI-friendly exit codes
+- Persistent run storage:
+  - local file store
+  - database store (PDO in core + Laravel migration)
+- Rich run metadata: per-case score, latency, tokens, cost, plus suite/run aggregates
+- Evaluator packs beyond string checks:
+  - `llm_judge_rubric`
+  - `rag_faithfulness`, `rag_relevance`, `rag_context_precision`
+  - `goal_completion`, `tool_call_accuracy`
+  - core checks (`contains`, `not_contains`, `regex`, `json_schema`, `semantic_similarity`, tool assertions)
+- Deterministic mode + replayability:
+  - request seed support
+  - provider response cache
+  - replay responses from a stored run
+- Laravel-first DX:
+  - `php artisan ai:eval:init`
+  - `php artisan ai:eval`
+  - `php artisan ai:eval:compare`
+  - `php artisan ai:eval:queue`
+  - `php artisan ai:eval:progress`
 
 ## Getting Started
 ### Requirements
 - PHP `^8.2`
-- Docker (recommended for local consistency)
+- Docker (recommended)
 
 ### Local Setup
 ```bash
@@ -32,8 +39,8 @@ make install
 make qa
 ```
 
-### Minimal Core Usage
-Create `php-evals.php` at project root:
+### Core Quickstart
+Create `php-evals.php`:
 
 ```php
 <?php
@@ -42,10 +49,15 @@ declare(strict_types=1);
 
 return [
     'dataset_path' => __DIR__.'/storage/ai-evals',
+    'store_runs' => true,
+    'run_store_driver' => 'file',
+    'run_store_path' => __DIR__.'/storage/ai-evals/runs',
+    'cache_enabled' => true,
+    'cache_path' => __DIR__.'/storage/ai-evals/cache',
     'model_client' => \PhpEvals\Core\Model\ArrayMapModelClient::class,
     'model_client_options' => [
         'responses' => [
-            'refund_001' => ['output' => 'Refund is available.'],
+            'refund_001' => ['output' => 'Refund policy allows returns within 30 days.'],
         ],
     ],
 ];
@@ -57,68 +69,101 @@ Create `storage/ai-evals/refund.jsonl`:
 {"id":"refund_001","input":"I was charged twice","expected":{"assertions":[{"type":"contains","value":"Refund"}]}}
 ```
 
-Run:
+Run evals:
 
 ```bash
-packages/core/bin/php-evals
-packages/core/bin/php-evals --suite=refund --format=json
+packages/core/bin/php-evals --suite=refund --store-runs
 packages/core/bin/php-evals --suite=refund --format=json --json-report-path=artifacts/evals.json
 ```
 
-### Minimal Laravel Usage
-After registering the Laravel bridge package:
+Create baseline/candidate comparison:
 
 ```bash
-php artisan ai:eval refund
+packages/core/bin/php-evals --suite=refund --store-runs --run-id=baseline
+packages/core/bin/php-evals --suite=refund --store-runs --run-id=candidate \
+  --compare-baseline-run-id=baseline \
+  --compare-candidate-run-id=candidate \
+  --fail-threshold=pass_rate_drop:0.02,avg_score_drop:0.05
 ```
 
-You can also use:
-
+### Laravel Quickstart
+1. Publish/init scaffolding:
 ```bash
-php artisan ai:eval --suite=refund --format=json --stop-on-failure
+php artisan ai:eval:init
+```
+
+2. Run first suite:
+```bash
+php artisan ai:eval sample
+```
+
+3. Compare runs:
+```bash
+php artisan ai:eval --suite=sample --store-runs --run-id=baseline
+php artisan ai:eval --suite=sample --store-runs --run-id=candidate
+php artisan ai:eval:compare baseline candidate --fail-threshold=pass_rate_drop:0.02
+```
+
+4. Queue large suites:
+```bash
+php artisan ai:eval:queue --suite=sample --chunk-size=25
+php artisan ai:eval:progress <run-id>
+php artisan ai:eval:queue --resume-run-id=<run-id>
 ```
 
 ## Feature Details
-### Core CLI Options
-- `--suite=<name>`
-- `--model=<name>`
-- `--format=table|json`
-- `--stop-on-failure`
-- `--dataset-path=<path>`
-- `--json-report-path=<path>`
-- `--config=<path>`
+### Deterministic + Replay
+- `--deterministic` + `--seed=<int>` to reduce run variance
+- `--cache-enabled` + `--cache-path=<path>` to reuse provider responses
+- `--replay-run-id=<run_id>` to replay stored outputs for reproducible debugging
 
-### Laravel Command Options
-`ai:eval` supports:
-- `suite` argument or `--suite=` option
-- `--model=`
-- `--format=table|json`
-- `--stop-on-failure`
-- `--dataset-path=`
-- `--json-report-path=`
-- `--config=`
+### Run Store
+- File driver:
+  - `--run-store-driver=file`
+  - `--run-store-path=storage/ai-evals/runs`
+- Database driver:
+  - `--run-store-driver=database`
+  - `--run-store-dsn=...`
+  - `--run-store-user=...`
+  - `--run-store-password=...`
+- Laravel includes migration publishing/loading for `ai_eval_runs`.
 
-### How It Complements Pest/PHPUnit
-- Pest/PHPUnit are test frameworks.
-- `php-evals` is a dataset-driven LLM evaluation layer.
-- Use Pest/PHPUnit for app logic tests; use `php-evals` for AI behavior regression checks over time.
+### CI Quality Gates
+- JSON output includes summary metrics and per-case details.
+- Comparison output includes:
+  - regression metrics (`pass_rate_drop`, `avg_score_drop`, latency/cost deltas)
+  - threshold violations
+  - per-case change listing
+- Process exits non-zero when:
+  - assertions fail
+  - configured comparison thresholds are violated
 
-### Repo Layout
-- `packages/core`: framework-agnostic runtime and CLI
-- `packages/laravel`: Laravel bridge
-- `docs`: installation, quickstarts, assertions, CI, extension guides
+### Framework Agnostic Core, Laravel-First DX
+- Core runtime has no framework coupling.
+- Laravel adapter adds commands, queue integration, config conventions, and onboarding scaffolds.
+- This complements PHPUnit/Pest rather than replacing them: use tests for deterministic app behavior; use `php-evals` for model behavior regression and quality tracking.
+
+## Documentation
+Start here if you are new:
+- `docs/first-time-user-guide.md`
+
+Then use:
+- `docs/installation.md`
+- `docs/quickstart-core.md`
+- `docs/quickstart-laravel.md`
+- `docs/assertions.md`
+- `docs/ci.md`
 
 ## Contribution Note
-Contributions are welcome.
-
 Before opening a PR:
+
 ```bash
 make qa
 ```
 
-Please keep these principles:
-- Core stays framework agnostic
-- Laravel DX improvements stay in the adapter layer
-- Tests and docs must be updated with behavior changes
+Principles:
+- Keep `packages/core` framework-agnostic.
+- Put Laravel ergonomics in `packages/laravel`.
+- Update tests and docs with behavior changes.
 
-See `docs/CONTRIBUTING.md` for workflow details.
+See `docs/CONTRIBUTING.md`.

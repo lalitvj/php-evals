@@ -14,5 +14,6 @@ final class ModelRequest
         public readonly string $input,
         public readonly ?string $model = null,
         public readonly array $metadata = [],
+        public readonly ?int $seed = null,
     ) {}
 }

@@ -29,6 +29,22 @@ final class JsonReporter
             $cases[] = [
                 'id' => $caseResult->caseId,
                 'passed' => $caseResult->passed(),
+                'score' => $caseResult->score(),
+                'latency_ms' => $caseResult->latencyMs,
+                'prompt_tokens' => $caseResult->promptTokens,
+                'completion_tokens' => $caseResult->completionTokens,
+                'total_tokens' => $caseResult->totalTokens(),
+                'cost' => $caseResult->cost,
+                'response' => [
+                    'output' => $caseResult->output,
+                    'tool_calls' => array_map(static fn ($toolCall): array => [
+                        'name' => $toolCall->name,
+                        'arguments' => $toolCall->arguments,
+                    ], $caseResult->toolCalls),
+                    'prompt_tokens' => $caseResult->promptTokens,
+                    'completion_tokens' => $caseResult->completionTokens,
+                    'cost' => $caseResult->cost,
+                ],
                 'assertions' => $assertions,
             ];
         }
@@ -39,6 +55,10 @@ final class JsonReporter
             'passed_cases' => $result->passedCases(),
             'failed_cases' => $result->failedCases(),
             'duration_ms' => $result->durationMs,
+            'average_case_latency_ms' => $result->averageCaseLatencyMs(),
+            'total_tokens' => $result->totalTokens(),
+            'total_cost' => $result->totalCost(),
+            'average_score' => $result->averageScore(),
             'cases' => $cases,
         ];
     }
