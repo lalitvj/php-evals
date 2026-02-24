@@ -8,6 +8,7 @@ use PhpEvals\Core\Contracts\Assertion;
 use PhpEvals\Core\Data\AssertionResult;
 use PhpEvals\Core\Data\EvalCase;
 use PhpEvals\Core\Data\ModelResponse;
+use PhpEvals\Core\Support\TextTokenizer;
 
 final class RagContextPrecisionAssertion implements Assertion
 {
@@ -31,13 +32,13 @@ final class RagContextPrecisionAssertion implements Assertion
             return AssertionResult::fail($this->type(), 'rag_context_precision requires context in assertion or case metadata.');
         }
 
-        $queryTokens = $this->tokens($case->input);
+        $queryTokens = TextTokenizer::tokenize($case->input);
         if ($queryTokens === []) {
             return AssertionResult::fail($this->type(), 'Case input is empty, cannot score context precision.');
         }
 
         $relevantCount = 0;
-        $responseTokens = $this->tokens($response->output);
+        $responseTokens = TextTokenizer::tokenize($response->output);
         foreach ($context as $chunk) {
             if (! is_string($chunk) || $chunk === '') {
                 continue;
@@ -74,13 +75,5 @@ final class RagContextPrecisionAssertion implements Assertion
         }
 
         return AssertionResult::pass($this->type(), ['score' => $score]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function tokens(string $text): array
-    {
-        return array_values(array_filter(array_unique(preg_split('/\W+/', strtolower($text)) ?: []), static fn (string $token): bool => strlen($token) >= 3));
     }
 }
