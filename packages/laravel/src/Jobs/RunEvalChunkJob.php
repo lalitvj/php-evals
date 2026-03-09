@@ -63,31 +63,33 @@ final class RunEvalChunkJob implements ShouldQueue
         $chunkPayload = (new JsonReporter)->toArray($result);
         $chunkKey = sprintf('%s:%d:%d', $this->suite, $this->offset, $this->limit);
 
-        $run = $store->getRun($this->runId) ?? [];
-        $queue = is_array($run['queue'] ?? null) ? $run['queue'] : [];
-        $chunkResults = is_array($queue['chunk_results'] ?? null) ? $queue['chunk_results'] : [];
-        $chunkResults[$chunkKey] = $chunkPayload;
+        $store->mutateRun($this->runId, function (array $run) use ($chunkKey, $chunkPayload): array {
+            $queue = is_array($run['queue'] ?? null) ? $run['queue'] : [];
+            $chunkResults = is_array($queue['chunk_results'] ?? null) ? $queue['chunk_results'] : [];
+            $chunkResults[$chunkKey] = $chunkPayload;
 
-        $completedChunks = is_array($queue['completed_chunks'] ?? null) ? $queue['completed_chunks'] : [];
-        if (! in_array($chunkKey, $completedChunks, true)) {
-            $completedChunks[] = $chunkKey;
-        }
+            $completedChunks = is_array($queue['completed_chunks'] ?? null) ? $queue['completed_chunks'] : [];
+            if (! in_array($chunkKey, $completedChunks, true)) {
+                $completedChunks[] = $chunkKey;
+                sort($completedChunks);
+            }
 
-        $queue['chunk_results'] = $chunkResults;
-        $queue['completed_chunks'] = $completedChunks;
+            $queue['chunk_results'] = $chunkResults;
+            $queue['completed_chunks'] = $completedChunks;
 
-        [$suites, $summary] = $this->aggregateFromChunks($chunkResults);
+            [$suites, $summary] = $this->aggregateFromChunks($chunkResults);
 
-        $totalChunks = (int) ($queue['total_chunks'] ?? count($completedChunks));
-        $isComplete = $totalChunks > 0 && count($completedChunks) >= $totalChunks;
+            $totalChunks = (int) ($queue['total_chunks'] ?? count($completedChunks));
+            $isComplete = $totalChunks > 0 && count($completedChunks) >= $totalChunks;
 
-        $store->updateRun($this->runId, [
-            'status' => $isComplete ? 'completed' : 'running',
-            'queue' => $queue,
-            'suites' => $suites,
-            'summary' => $summary,
-            'finished_at' => $isComplete ? gmdate(DATE_ATOM) : null,
-        ]);
+            $run['status'] = $isComplete ? 'completed' : 'running';
+            $run['queue'] = $queue;
+            $run['suites'] = $suites;
+            $run['summary'] = $summary;
+            $run['finished_at'] = $isComplete ? gmdate(DATE_ATOM) : null;
+
+            return $run;
+        });
     }
 
     /**

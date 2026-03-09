@@ -53,6 +53,59 @@ final class PdoRunStore implements RunStore
         ]);
     }
 
+    public function mutateRun(string $runId, callable $mutator): array
+    {
+        $driver = (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        try {
+            if ($driver === 'sqlite') {
+                $this->pdo->exec('BEGIN IMMEDIATE TRANSACTION');
+            } else {
+                $this->pdo->beginTransaction();
+            }
+
+            [$existing, $exists] = $this->loadRunForMutation($runId, $driver);
+            $updated = $mutator($existing);
+            $updated['id'] = $runId;
+            $updated['created_at'] = is_string($existing['created_at'] ?? null)
+                ? $existing['created_at']
+                : gmdate('Y-m-d H:i:s');
+            $updated['updated_at'] = gmdate('Y-m-d H:i:s');
+
+            $json = json_encode($updated, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if (! is_string($json)) {
+                throw new RuntimeConfigurationException('Unable to encode run payload for database mutation.');
+            }
+
+            if ($exists) {
+                $stmt = $this->pdo->prepare('UPDATE ai_eval_runs SET payload = :payload, updated_at = :updated_at WHERE id = :id');
+                $stmt->execute([
+                    ':id' => $runId,
+                    ':payload' => $json,
+                    ':updated_at' => $updated['updated_at'],
+                ]);
+            } else {
+                $stmt = $this->pdo->prepare('INSERT INTO ai_eval_runs (id, payload, created_at, updated_at) VALUES (:id, :payload, :created_at, :updated_at)');
+                $stmt->execute([
+                    ':id' => $runId,
+                    ':payload' => $json,
+                    ':created_at' => $updated['created_at'],
+                    ':updated_at' => $updated['updated_at'],
+                ]);
+            }
+
+            $this->pdo->commit();
+
+            return $updated;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $e;
+        }
+    }
+
     public function getRun(string $runId): ?array
     {
         $stmt = $this->pdo->prepare('SELECT payload FROM ai_eval_runs WHERE id = :id LIMIT 1');
@@ -105,6 +158,36 @@ final class PdoRunStore implements RunStore
                 $e,
             );
         }
+    }
+
+    /**
+     * @return array{0: array<string, mixed>, 1: bool}
+     */
+    private function loadRunForMutation(string $runId, string $driver): array
+    {
+        $query = 'SELECT payload, created_at FROM ai_eval_runs WHERE id = :id LIMIT 1';
+        if (in_array($driver, ['mysql', 'pgsql', 'sqlsrv'], true)) {
+            $query .= ' FOR UPDATE';
+        }
+
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([':id' => $runId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (! is_array($row)) {
+            return [['id' => $runId, 'created_at' => gmdate('Y-m-d H:i:s')], false];
+        }
+
+        $payload = json_decode((string) ($row['payload'] ?? ''), true);
+        if (! is_array($payload)) {
+            $payload = ['id' => $runId];
+        }
+
+        if (! isset($payload['created_at']) && is_string($row['created_at'] ?? null)) {
+            $payload['created_at'] = $row['created_at'];
+        }
+
+        return [$payload, true];
     }
 
     /**

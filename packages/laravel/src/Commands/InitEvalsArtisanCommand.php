@@ -71,8 +71,20 @@ return [
     'cache_enabled' => true,
     'cache_path' => storage_path('ai-evals/cache'),
 
+    // Start with the fake client below, then switch to one of:
+    // \PhpEvals\Laravel\Integrations\Prism\PrismModelClient::class
+    // \PhpEvals\Laravel\Integrations\LaravelAI\LaravelAIModelClient::class
     'model_client' => \App\AI\FakeEvalModelClient::class,
     'model_client_options' => [],
+
+    // Local mode keeps scoring API-free for fast feedback.
+    // For higher-trust scoring, set:
+    // 'similarity_scorer' => 'openai_embeddings',
+    // 'judge_client' => 'openai',
+    'similarity_scorer' => 'local',
+    'similarity_scorer_options' => [],
+    'judge_client' => 'local',
+    'judge_client_options' => [],
 
     'fail_thresholds' => [
         'pass_rate_drop' => 0.05,

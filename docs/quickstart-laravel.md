@@ -7,9 +7,12 @@ For a full onboarding flow with use-case examples, start here:
 Laravel shortest path:
 1. Register `PhpEvals\\Laravel\\LaravelEvalsServiceProvider` (if auto-discovery is disabled).
 2. Run `php artisan ai:eval:init`.
-3. Update `config/ai-evals.php` to use your real model client.
+3. Update `config/ai-evals.php` to use your real model client:
+   - `PhpEvals\\Laravel\\Integrations\\Prism\\PrismModelClient::class`, or
+   - `PhpEvals\\Laravel\\Integrations\\LaravelAI\\LaravelAIModelClient::class`
 4. Run `php artisan ai:eval sample`.
-5. Store and compare runs with `php artisan ai:eval:compare`.
+5. Keep `similarity_scorer` / `judge_client` on `local` for lightweight feedback, or switch to `openai_embeddings` / `openai` for higher-trust scoring.
+6. Store and compare runs with `php artisan ai:eval:compare`.
 
 Queue/resume for large suites:
 - `php artisan ai:eval:queue`

@@ -4,9 +4,9 @@
 [![PHP Version](https://img.shields.io/badge/php-%5E8.2-8892BF.svg)](https://www.php.net/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**The evaluation framework for PHP LLM applications.** Test your chatbots, RAG pipelines, AI agents, and structured outputs with 14 assertion types, baseline/candidate comparison, queue support, and CI integration.
+**Laravel-first AI testing layer with a framework-agnostic PHP core.** Regression-test chatbots, RAG flows, tool-calling agents, and structured outputs before prompt or model changes ship.
 
-> Think **DeepEval for PHP**. Works alongside Prism, Laravel AI SDK, or any HTTP-based LLM provider.
+> Built for Laravel AI apps first. Works directly with Prism and Laravel AI, while keeping the core runner framework-agnostic.
 
 ## 30-Second Quickstart
 
@@ -24,9 +24,9 @@ php artisan ai:eval sample
 php artisan ai:eval support-bot --store-runs --run-id=v1
 ```
 
-That's it. You have a stored eval run with per-case scores, latency, tokens, and cost.
+That gets you to a stored eval run with pass/fail results, scores, latency, tokens, and cost.
 
-## Why php-evals?
+## Why Developers Would Use It
 
 PHPUnit tests deterministic logic. But LLM outputs are non-deterministic -- the same prompt can return different wording every time. You need a different kind of testing.
 
@@ -40,18 +40,18 @@ PHPUnit tests deterministic logic. But LLM outputs are non-deterministic -- the 
 | **CI integration** | None | Exit codes | Exit codes + JSON reports + comparison gates |
 | **History** | Spreadsheet notes | Pass/fail | Full run history with metrics and diffs |
 
-**php-evals complements PHPUnit/Pest.** Use tests for your application logic. Use evals for your AI output quality.
+**php-evals complements PHPUnit/Pest.** Keep tests for deterministic app logic. Use evals for AI behavior, regression checks, and release gating.
 
-## How php-evals Fits the Laravel AI Ecosystem
+## Best Fit
 
 | Tool | What It Does | Relationship to php-evals |
 |------|-------------|--------------------------|
-| **[Prism](https://github.com/echolabsdev/prism)** | Call LLMs via a unified API | Use `PrismModelClient` adapter to eval your Prism app |
-| **[Laravel AI SDK](https://github.com/laravel/ai)** | Build AI agents with tools | Use `LaravelAIModelClient` adapter to eval your agents |
-| **Direct API calls** | Raw HTTP to OpenAI / Anthropic / Gemini | Use the provider-specific adapters |
+| **[Prism](https://github.com/echolabsdev/prism)** | Call LLMs via a unified API | Use the built-in `PhpEvals\\Laravel\\Integrations\\Prism\\PrismModelClient` |
+| **[Laravel AI SDK](https://github.com/laravel/ai)** | Build AI agents with tools | Use the built-in `PhpEvals\\Laravel\\Integrations\\LaravelAI\\LaravelAIModelClient` |
+| **Direct API calls** | Raw HTTP to OpenAI / Anthropic / Gemini | Implement `ModelClient` directly or adapt the provider examples in `docs/examples/adapters/` |
 | **PHPUnit / Pest** | Test deterministic app logic | Keep using them. php-evals handles the non-deterministic AI layer |
 
-**They call LLMs. php-evals tests them.** They are complementary, not competing.
+**The sharpest use case today is Laravel AI regression testing.** You can still use the core package outside Laravel, but the fastest path is a Laravel app already calling models through Prism or Laravel AI.
 
 ## 14 Assertion Types
 
@@ -79,20 +79,25 @@ PHPUnit tests deterministic logic. But LLM outputs are non-deterministic -- the 
 ### LLM-as-judge
 - `llm_judge_rubric` -- another LLM scores the response against a rubric
 
-## Model Adapters
+## Maintained Integrations
 
-Copy-pasteable adapters for every major provider are in [`docs/examples/adapters/`](docs/examples/adapters/):
+Built-in package classes:
 
-| Adapter | Provider |
-|---------|----------|
-| `OpenAIModelClient` | OpenAI (GPT-4o, GPT-4o-mini, etc.) |
-| `AnthropicModelClient` | Anthropic (Claude Sonnet, Opus, Haiku) |
-| `GeminiModelClient` | Google Gemini |
-| `PrismModelClient` | Any provider via Prism |
-| `LaravelAIModelClient` | Any provider via Laravel AI SDK |
-| `OpenAIJudgeClient` | LLM-as-judge via OpenAI |
+| Integration | Class / Config |
+|------------|----------------|
+| Prism model client | `PhpEvals\\Laravel\\Integrations\\Prism\\PrismModelClient::class` |
+| Laravel AI model client | `PhpEvals\\Laravel\\Integrations\\LaravelAI\\LaravelAIModelClient::class` |
+| OpenAI judge client | `'judge_client' => 'openai'` or `PhpEvals\\Core\\Integrations\\OpenAI\\OpenAIJudgeClient::class` |
+| OpenAI embedding scorer | `'similarity_scorer' => 'openai_embeddings'` or `PhpEvals\\Core\\Integrations\\OpenAI\\OpenAIEmbeddingSimilarityScorer::class` |
 
-Each adapter implements one interface: `ModelClient::complete(ModelRequest): ModelResponse`.
+You can still implement your own `ModelClient`, `JudgeClient`, or `SimilarityScorer` if your stack is different.
+
+## Scoring Modes
+
+`php-evals` now has two explicit scoring tiers:
+
+- **Local / lightweight**: token-overlap similarity and heuristic judge logic. Good for fast local smoke checks and CI without API calls.
+- **API-backed**: OpenAI embeddings for similarity and OpenAI judge scoring for `llm_judge_rubric`. This is the recommended mode for decisions that affect releases.
 
 ## Key Features
 
@@ -106,7 +111,7 @@ php artisan ai:eval:compare baseline candidate \
     --fail-threshold=pass_rate_drop:0.02,avg_score_drop:0.05
 ```
 
-Exit code `1` if quality drops beyond your threshold. Gate your CI on it.
+`ai:eval:compare` compares stored runs directly. It does not re-execute suites.
 
 ### Queue Support for Large Suites
 
@@ -116,7 +121,7 @@ php artisan ai:eval:progress queued-v1
 php artisan ai:eval:queue --resume-run-id=queued-v1  # resume on failure
 ```
 
-Splits suites into chunked queue jobs. Parallel execution across workers. Resume from failure without re-running completed chunks.
+Splits suites into chunked queue jobs, aggregates results into a stored run, and supports resume without re-running completed chunks.
 
 ### CI Quality Gates
 
@@ -179,11 +184,13 @@ return [
     'store_runs' => true,
     'run_store_driver' => 'file',
     'run_store_path' => __DIR__.'/storage/ai-evals/runs',
-    'model_client' => \App\AI\OpenAIModelClient::class,
+    'model_client' => \PhpEvals\Core\Model\ArrayMapModelClient::class,
     'model_client_options' => [
-        'api_key' => getenv('OPENAI_API_KEY'),
-        'model' => 'gpt-4o',
+        'responses' => [
+            'support_001' => ['output' => 'Refunds are processed in 3-5 business days.'],
+        ],
     ],
+    'similarity_scorer' => 'local',
 ];
 ```
 

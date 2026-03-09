@@ -33,13 +33,18 @@ return [
         'chunk_size' => 25,
     ],
 
-    // Set this to your implementation class or closure.
+    // Recommended Laravel-native integrations:
+    // - Prism: \PhpEvals\Laravel\Integrations\Prism\PrismModelClient::class
+    // - Laravel AI: \PhpEvals\Laravel\Integrations\LaravelAI\LaravelAIModelClient::class
     'model_client' => null,
     'model_client_options' => [],
-    'judge_client' => null,
+
+    // Scoring tiers:
+    // - 'local' / 'heuristic' keeps everything lightweight and API-free.
+    // - 'openai' and 'openai_embeddings' use real OpenAI-backed evaluation.
+    'judge_client' => 'local',
     'judge_client_options' => [],
 
-    // Optional scorer override.
-    'similarity_scorer' => null,
+    'similarity_scorer' => 'local',
     'similarity_scorer_options' => [],
 ];

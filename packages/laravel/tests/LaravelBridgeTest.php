@@ -8,6 +8,7 @@ use Orchestra\Testbench\TestCase;
 use PhpEvals\Core\Contracts\ModelClient;
 use PhpEvals\Core\Data\ModelRequest;
 use PhpEvals\Core\Data\ModelResponse;
+use PhpEvals\Core\Storage\FileRunStore;
 use PhpEvals\Laravel\LaravelEvalsServiceProvider;
 
 final class LaravelBridgeTest extends TestCase
@@ -30,6 +31,7 @@ final class LaravelBridgeTest extends TestCase
 
         $this->app['config']->set('ai-evals', [
             'dataset_path' => $this->datasetPath,
+            'run_store_path' => $this->datasetPath.'/runs',
             'model_client' => LaravelBridgeModelClient::class,
             'model_client_options' => [
                 'responses' => [
@@ -43,6 +45,10 @@ final class LaravelBridgeTest extends TestCase
     {
         @unlink($this->reportPath);
         @unlink($this->datasetPath.'/refund.jsonl');
+        foreach (glob($this->datasetPath.'/runs/*.json') ?: [] as $runFile) {
+            @unlink($runFile);
+        }
+        @rmdir($this->datasetPath.'/runs');
         @rmdir($this->datasetPath);
 
         parent::tearDown();
@@ -93,6 +99,48 @@ final class LaravelBridgeTest extends TestCase
 
         self::assertIsArray($paths);
         self::assertTrue($this->app->providerIsLoaded(LaravelEvalsServiceProvider::class));
+    }
+
+    public function test_compare_command_uses_stored_runs_without_reexecuting_model_client(): void
+    {
+        $store = new FileRunStore($this->datasetPath.'/runs');
+        $store->createRun([
+            'summary' => [
+                'total_cases' => 1,
+                'passed_cases' => 1,
+                'average_score' => 1.0,
+            ],
+            'suites' => [[
+                'cases' => [[
+                    'id' => 'case-1',
+                    'passed' => true,
+                    'score' => 1.0,
+                    'response' => ['output' => 'good'],
+                ]],
+            ]],
+        ], 'baseline');
+        $store->createRun([
+            'summary' => [
+                'total_cases' => 1,
+                'passed_cases' => 0,
+                'average_score' => 0.2,
+            ],
+            'suites' => [[
+                'cases' => [[
+                    'id' => 'case-1',
+                    'passed' => false,
+                    'score' => 0.2,
+                    'response' => ['output' => 'bad'],
+                ]],
+            ]],
+        ], 'candidate');
+
+        $this->app['config']->set('ai-evals.model_client', 'Missing\\ModelClient');
+
+        $this->artisan('ai:eval:compare baseline candidate --format=json --fail-threshold=pass_rate_drop:0.1')
+            ->expectsOutputToContain('"baseline_run_id": "baseline"')
+            ->expectsOutputToContain('"candidate_run_id": "candidate"')
+            ->assertExitCode(1);
     }
 }
 
