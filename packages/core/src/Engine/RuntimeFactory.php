@@ -25,6 +25,8 @@ use PhpEvals\Core\Contracts\ModelClient;
 use PhpEvals\Core\Contracts\RunStore;
 use PhpEvals\Core\Contracts\SimilarityScorer;
 use PhpEvals\Core\Exceptions\RuntimeConfigurationException;
+use PhpEvals\Core\Integrations\OpenAI\OpenAIEmbeddingSimilarityScorer;
+use PhpEvals\Core\Integrations\OpenAI\OpenAIJudgeClient;
 use PhpEvals\Core\Model\CachedModelClient;
 use PhpEvals\Core\Model\HeuristicJudgeClient;
 use PhpEvals\Core\Model\NullModelClient;
@@ -114,6 +116,14 @@ final class RuntimeFactory
         }
 
         if (is_string($definition)) {
+            if (in_array($definition, ['local', 'token_overlap'], true)) {
+                return new TokenOverlapSimilarityScorer;
+            }
+
+            if ($definition === 'openai_embeddings') {
+                return new OpenAIEmbeddingSimilarityScorer($config->similarityScorerOptions);
+            }
+
             $instance = $this->instantiate($definition, $config->similarityScorerOptions, SimilarityScorer::class);
 
             /** @var SimilarityScorer $instance */
@@ -183,6 +193,14 @@ final class RuntimeFactory
         }
 
         if (is_string($definition)) {
+            if (in_array($definition, ['local', 'heuristic'], true)) {
+                return new HeuristicJudgeClient;
+            }
+
+            if ($definition === 'openai') {
+                return new OpenAIJudgeClient($config->judgeClientOptions);
+            }
+
             $instance = $this->instantiate($definition, $config->judgeClientOptions, JudgeClient::class);
 
             /** @var JudgeClient $instance */

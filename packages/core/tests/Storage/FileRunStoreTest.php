@@ -47,4 +47,29 @@ final class FileRunStoreTest extends TestCase
         self::assertSame(2, $updated['summary']['passed_cases']);
         self::assertNotEmpty($store->listRuns());
     }
+
+    public function test_mutate_run_updates_payload_under_lock(): void
+    {
+        $store = new FileRunStore($this->directory);
+        $runId = $store->createRun([
+            'status' => 'queued',
+            'queue' => [
+                'completed_chunks' => [],
+                'chunk_results' => [],
+            ],
+        ]);
+
+        $store->mutateRun($runId, static function (array $run): array {
+            $run['queue']['completed_chunks'][] = 'refund:0:25';
+            $run['queue']['chunk_results']['refund:0:25'] = ['suite' => 'refund'];
+
+            return $run;
+        });
+
+        $mutated = $store->getRun($runId);
+
+        self::assertIsArray($mutated);
+        self::assertSame(['refund:0:25'], $mutated['queue']['completed_chunks']);
+        self::assertSame('refund', $mutated['queue']['chunk_results']['refund:0:25']['suite']);
+    }
 }

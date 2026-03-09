@@ -24,6 +24,10 @@
             ]
         }
     },
+    "suggest": {
+        "echolabsdev/prism": "For the built-in Prism model client integration.",
+        "laravel/ai": "For the built-in Laravel AI model client integration."
+    },
     "minimum-stability": "stable",
     "prefer-stable": true
 }

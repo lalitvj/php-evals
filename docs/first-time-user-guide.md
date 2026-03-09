@@ -3,7 +3,7 @@
 This guide is for developers using `php-evals` for the first time.
 
 ## What `php-evals` is
-`php-evals` is a dataset-driven evaluation toolkit for LLM behavior in PHP applications.
+`php-evals` is a Laravel-first, dataset-driven testing layer for AI behavior, with a framework-agnostic PHP core underneath.
 
 It is not a replacement for PHPUnit/Pest.  
 It solves a different problem: measuring AI output quality over time and detecting regressions before release.
@@ -16,11 +16,15 @@ Use `php-evals` when you want to:
 - gate CI merges on eval quality thresholds
 
 ## Where it fits
-Use it for:
+Use it first for:
 - support/chat assistants
 - RAG answer quality checks
 - tool-calling agents
 - structured output contracts
+
+Strongest fit:
+- Laravel apps already using Prism or Laravel AI
+- teams shipping prompt/model changes and wanting repeatable regression checks
 
 Keep using PHPUnit/Pest for:
 - deterministic business logic
@@ -32,6 +36,7 @@ Keep using PHPUnit/Pest for:
 - makes prompt/model upgrades safer through baseline-vs-candidate diffing
 - provides run history for debugging and auditability
 - supports reproducibility with deterministic mode, cache, and replay
+- lets you start locally with lightweight heuristics, then move to OpenAI-backed scoring when you need higher trust
 
 ## Step-by-step: first run (framework-agnostic core)
 1. Create config file `php-evals.php`:
@@ -87,6 +92,10 @@ This generates:
 - `storage/ai-evals/sample.jsonl`
 - `app/AI/FakeEvalModelClient.php`
 - `.github/workflows/ai-evals.yml`
+
+Recommended next step after the sample run:
+- switch `model_client` to `PhpEvals\Laravel\Integrations\Prism\PrismModelClient::class` or `PhpEvals\Laravel\Integrations\LaravelAI\LaravelAIModelClient::class`
+- keep `similarity_scorer` / `judge_client` on `local` for fast feedback, or move to `openai_embeddings` / `openai` for higher-trust scoring
 
 2. Run first suite:
 
@@ -167,6 +176,15 @@ Use these together:
 - `--deterministic --seed=<int>` for stable request behavior
 - `--cache-enabled --cache-path=<path>` to reuse provider responses
 - `--replay-run-id=<run_id>` to replay a stored run for debugging
+
+## Scoring tiers
+Local / lightweight:
+- `similarity_scorer => 'local'`
+- `judge_client => 'local'`
+
+OpenAI-backed:
+- `similarity_scorer => 'openai_embeddings'`
+- `judge_client => 'openai'`
 
 ## Run storage options
 File store:

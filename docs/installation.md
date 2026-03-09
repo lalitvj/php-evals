@@ -60,3 +60,11 @@ Then run:
 php artisan ai:eval:init
 php artisan ai:eval sample
 ```
+
+Recommended integrations after the sample run:
+- `PhpEvals\Laravel\Integrations\Prism\PrismModelClient::class`
+- `PhpEvals\Laravel\Integrations\LaravelAI\LaravelAIModelClient::class`
+
+Recommended scoring modes:
+- `similarity_scorer => 'local'` and `judge_client => 'local'` for lightweight, API-free checks
+- `similarity_scorer => 'openai_embeddings'` and `judge_client => 'openai'` for release-facing eval quality

@@ -17,6 +17,12 @@ interface RunStore
     public function updateRun(string $runId, array $payload): void;
 
     /**
+     * @param  callable(array<string, mixed>): array<string, mixed>  $mutator
+     * @return array<string, mixed>
+     */
+    public function mutateRun(string $runId, callable $mutator): array;
+
+    /**
      * @return array<string, mixed>|null
      */
     public function getRun(string $runId): ?array;

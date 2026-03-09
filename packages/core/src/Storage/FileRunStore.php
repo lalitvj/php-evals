@@ -48,6 +48,61 @@ final class FileRunStore implements RunStore
         $this->writeJson($this->pathFor($id), $merged);
     }
 
+    public function mutateRun(string $runId, callable $mutator): array
+    {
+        $id = $this->sanitizeRunId($runId);
+        $path = $this->pathFor($id);
+        $handle = fopen($path, 'c+');
+        if ($handle === false) {
+            throw new StorageWriteException(sprintf('Unable to open run data file %s for mutation.', $path));
+        }
+
+        try {
+            if (! flock($handle, LOCK_EX)) {
+                throw new StorageWriteException(sprintf('Unable to acquire lock for run data file %s.', $path));
+            }
+
+            rewind($handle);
+            $contents = stream_get_contents($handle);
+            $decoded = is_string($contents) && trim($contents) !== ''
+                ? json_decode($contents, true)
+                : null;
+
+            $existing = is_array($decoded)
+                ? $decoded
+                : ['id' => $id, 'created_at' => gmdate(DATE_ATOM)];
+
+            $updated = $mutator($existing);
+            $updated['id'] = $id;
+            $updated['created_at'] = is_string($existing['created_at'] ?? null)
+                ? $existing['created_at']
+                : gmdate(DATE_ATOM);
+            $updated['updated_at'] = gmdate(DATE_ATOM);
+
+            $encoded = json_encode($updated, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if (! is_string($encoded)) {
+                throw new RuntimeConfigurationException(sprintf('Unable to encode run payload for %s.', $path));
+            }
+
+            rewind($handle);
+            if (! ftruncate($handle, 0)) {
+                throw new StorageWriteException(sprintf('Unable to truncate run data file %s.', $path));
+            }
+
+            $result = fwrite($handle, $encoded);
+            if ($result === false) {
+                throw new StorageWriteException(sprintf('Unable to write mutated run data to %s.', $path));
+            }
+
+            fflush($handle);
+
+            return $updated;
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
     public function getRun(string $runId): ?array
     {
         $file = $this->pathFor($this->sanitizeRunId($runId));

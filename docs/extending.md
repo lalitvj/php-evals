@@ -25,6 +25,12 @@ return [
 ];
 ```
 
+Before writing your own adapter, check the built-in integrations:
+- `PhpEvals\Laravel\Integrations\Prism\PrismModelClient`
+- `PhpEvals\Laravel\Integrations\LaravelAI\LaravelAIModelClient`
+- `PhpEvals\Core\Integrations\OpenAI\OpenAIJudgeClient`
+- `PhpEvals\Core\Integrations\OpenAI\OpenAIEmbeddingSimilarityScorer`
+
 ## Custom Similarity Scorer
 Implement `PhpEvals\Core\Contracts\SimilarityScorer` and set:
 
@@ -34,6 +40,12 @@ return [
     'similarity_scorer_options' => [],
 ];
 ```
+
+Aliases are also supported:
+- `'similarity_scorer' => 'local'`
+- `'similarity_scorer' => 'openai_embeddings'`
+- `'judge_client' => 'local'`
+- `'judge_client' => 'openai'`
 
 ## Custom Assertion Type
 Implement `PhpEvals\Core\Contracts\Assertion` and register it by extending runtime setup in your own bootstrap path around `AssertionRegistry`.
